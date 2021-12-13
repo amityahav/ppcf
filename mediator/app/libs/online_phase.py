@@ -1,3 +1,4 @@
+import jsonpickle
 import numpy as np
 import random
 from app.helpers.utils import Singleton
@@ -22,6 +23,14 @@ class OnlinePhase(metaclass=Singleton):
         random_multiplier = random.randint(1, 100)
 
         # Step 5
+        encrypted_user_item_row = self._mediator.get_encrypted_user_item_matrix()[user_id, :]
+        encrypted_mask_row = self._mediator.get_encrypted_mask()[user_id, :]
+        random_vector = random_multiplier * s_m
+
+        x = np.dot(encrypted_user_item_row, random_vector)
+        y = np.dot(encrypted_mask_row, random_vector)
+
+        return jsonpickle.encode({"x": x, "y": y})
 
     def q_nearst_neighbors(self, item_id):
         result = []

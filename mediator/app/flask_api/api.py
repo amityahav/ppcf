@@ -13,4 +13,3 @@ api_prefix = "/mediator"
 api.add_namespace(protocol_one, path=api_prefix)
 api.add_namespace(protocol_two, path=api_prefix)
 api.add_namespace(protocol_three, path=api_prefix)
-

@@ -1,5 +1,5 @@
-from flask import jsonify, request
-from flask_restx import Resource, Namespace, fields
+from flask import request
+from flask_restx import Resource, Namespace
 
 from app.libs.online_phase import OnlinePhase
 
@@ -19,4 +19,3 @@ class ProtocolOne(Resource):
 
         except Exception as e:
             return {"message": str(e)}
-

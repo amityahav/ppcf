@@ -1,6 +1,6 @@
 import jsonpickle
-from flask import jsonify, request
-from flask_restx import Resource, Namespace, fields
+from flask import request
+from flask_restx import Resource, Namespace
 
 from app.libs.offline_phase import OfflinePhase
 
@@ -14,7 +14,8 @@ class ProtocolTwo(Resource):
     def post(self):
         try:
             data = jsonpickle.decode(request.get_json())
-            OfflinePhase().protocol_two(data)
+            enc_user_item_matrix, enc_mask, start, end = data["enc_user_item_matrix"], data["enc_mask"], data["start"], data["end"]
+            OfflinePhase().protocol_two(enc_user_item_matrix, enc_mask, start, end)
         except Exception as e:
             return {"message": str(e)}
 

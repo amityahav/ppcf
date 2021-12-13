@@ -1,7 +1,9 @@
 MEDIATOR_API_BASE = 'http://127.0.0.1:5001/mediator'
+MEDIATOR_PUBLIC_KEY_ENDPOINT = f'{MEDIATOR_API_BASE}/public_key'
 MEDIATOR_PROTOCOL_ONE_ENDPOINT = f'{MEDIATOR_API_BASE}/protocol_one'
 MEDIATOR_PROTOCOL_TWO_ENDPOINT = f'{MEDIATOR_API_BASE}/protocol_two'
 MEDIATOR_PROTOCOL_THREE_ENDPOINT = f'{MEDIATOR_API_BASE}/protocol_three'
 
 SHARED_DIR_PATH = '../shared/'
+DATA_PATH = 'app/data'
 SIMILARITY_MATRIX_PATH = '../mediator/app/data/similarity_matrix.npy'

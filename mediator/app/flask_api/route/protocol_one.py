@@ -1,5 +1,5 @@
-from flask import jsonify, request
-from flask_restx import Resource, Namespace, fields
+from flask import request
+from flask_restx import Resource, Namespace
 from app.libs.offline_phase import OfflinePhase
 
 api = Namespace('protocol_one')

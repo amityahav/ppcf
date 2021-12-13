@@ -1,4 +1,4 @@
-from flask import jsonify, request
+from flask import request
 from flask_restx import Resource, Namespace, fields
 from app.libs.online_phase import OnlinePhase
 

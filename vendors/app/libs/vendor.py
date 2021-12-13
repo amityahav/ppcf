@@ -8,6 +8,7 @@ class Vendor:
         self._end = end
         self._he = he
         self._user_item_matrix = user_item_matrix
+        self._average_ratings = None
 
     def get_item_ratings(self, index):
 
@@ -18,4 +19,10 @@ class Vendor:
     def get_item_range(self):
 
         return self._start, self._end
+
+    def get_average_ratings(self):
+        return self._average_ratings
+
+    def set_average_ratings(self, avg_ratings):
+        self._average_ratings = avg_ratings
 

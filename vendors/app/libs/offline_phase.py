@@ -6,8 +6,8 @@ import jsonpickle
 import threading
 import requests
 from pathlib import Path
-import shutil
-from concurrent.futures import ThreadPoolExecutor
+
+
 from app.libs.vendors import Vendors
 from app.libs.vendor import Vendor
 from app.helpers.utils import Singleton
@@ -46,16 +46,16 @@ class OfflinePhase(metaclass=Singleton):
         threads = []
 
         # PROTOCOL 2
-        # for i in range(number_of_vendors):
-        #     thread = threading.Thread(target=lambda: self.protocol_two(self._vendors.get_vendors()[i]))
-        #     threads.append(thread)
-        #     thread.start()
-        #
-        # for thread in threads:
-        #     thread.join()
-        #
-        # requests.put(MEDIATOR_PROTOCOL_TWO_ENDPOINT)
-        # self.protocol_two(self._vendors.get_vendors()[0])
+        for i in range(number_of_vendors):
+            thread = threading.Thread(target=lambda: self.protocol_two(self._vendors.get_vendors()[i]))
+            threads.append(thread)
+            thread.start()
+
+        for thread in threads:
+            thread.join()
+
+        requests.put(MEDIATOR_PROTOCOL_TWO_ENDPOINT)
+        #self.protocol_two(self._vendors.get_vendors()[0])
 
     def protocol_one(self, v_j, v_k):
 
@@ -82,7 +82,7 @@ class OfflinePhase(metaclass=Singleton):
                     "z2": z2,
                     "z3": z3
                 }
-                response = requests.post(MEDIATOR_PROTOCOL_ONE_ENDPOINT, data=json.dumps(data), headers=self._headers)
+                requests.post(MEDIATOR_PROTOCOL_ONE_ENDPOINT, data=json.dumps(data), headers=self._headers)
 
     def protocol_two(self, v_j):
 
@@ -93,55 +93,56 @@ class OfflinePhase(metaclass=Singleton):
         mask = self.mask(items)
         ratings_sum = np.sum(items, axis=0, dtype='float32')
         mask_sum = np.sum(mask, axis=0, dtype='float32')
-        adjusted_items_ratings = np.subtract(items, np.divide(ratings_sum, mask_sum,
-                                                              out=np.zeros_like(ratings_sum),
-                                                              where=mask_sum != 0)) * mask
+        average_ratings = np.divide(ratings_sum, mask_sum, out=np.zeros_like(ratings_sum), where=mask_sum != 0)
+        adjusted_items_ratings = np.subtract(items, average_ratings) * mask
+
+        v_j.set_average_ratings(average_ratings)
 
         # Step 4
-        encrypted_user_item_matrix = np.vectorize(self.encrypt)(adjusted_items_ratings)
-        encrypted_mask = np.vectorize(self.encrypt)(mask)
+        adjusted_items_ratings = adjusted_items_ratings.tolist()
+        mask = mask.tolist()
+
+        public_key = self._vendors.get_he()["public_key"]
+        try:
+            encrypted_user_item_matrix = self.encrypt_matrix(adjusted_items_ratings)
+            encrypted_mask = self.encrypt_matrix(mask)
+            # encrypted_user_item_matrix = [[public_key.encrypt(rating) for rating in row] for row in adjusted_items_ratings]
+            # encrypted_mask = [[public_key.encrypt(x) for x in row] for row in mask]
+        except Exception as e:
+            raise "ERROR"
+        print("check")
+
+        # ######TEST
+        # matrix = np.array([[1, 2, 3], [2, 3, 4]], dtype='int')
+        # matrix2 = np.array([[1, 0, 1], [1, 1, 0]], dtype='int')
+        # matrix = matrix.tolist()
+        # matrix2 = matrix2.tolist()
+        # encrypted_user_item_matrix = [[public_key.encrypt(x) for x in row] for row in matrix]
+        # encrypted_mask = [[public_key.encrypt(x) for x in row] for row in matrix2]
+        # ######TEST
+
         requests.post(MEDIATOR_PROTOCOL_TWO_ENDPOINT,
-                      data=json.dumps(jsonpickle.encode((encrypted_user_item_matrix, encrypted_mask, start))),
+                      data=json.dumps(jsonpickle.encode({
+                          "enc_user_item_matrix": encrypted_user_item_matrix,
+                          "enc_mask": encrypted_mask,
+                          "start": start,
+                          "end": end
+                      })),
                       headers=self._headers)
 
     @staticmethod
     def mask(matrix):
         return matrix > 0
 
-    count = 0
-
-    def encrypt(self, rating):
-        print(self.count)
-        self.count += 1
-        return self._vendors.get_he().encryptFrac(rating)
-
-    # def protocol_one(self, v_j, v_k):
-    #
-    #     random_multiplier = random.randint(1, 100)
-    #     v_j_item_range = v_j.get_item_range()
-    #     v_k_item_range = v_k.get_item_range()
-    #
-    #     with ThreadPoolExecutor(max_workers=4) as executor:
-    #         for i in range(v_j_item_range[0], v_j_item_range[1] + 1):
-    #             executor.submit(self.inner_loop_task, i, random_multiplier, v_j_item_range, v_k_item_range, v_j, v_k)
-    #             print("check")
-    #         executor.shutdown(wait=True)
-    #
-    # def inner_loop_task(self, i, random_multiplier, v_k_item_range, v_j, v_k):
-    #
-    #     for j in range(v_k_item_range[0], v_k_item_range[1] + 1):
-    #         v_j_item_col = v_j.get_item_ratings(i)
-    #         v_k_item_col = v_k.get_item_ratings(j)
-    #
-    #         z1 = np.dot(random_multiplier * v_j_item_col, v_k_item_col).item()
-    #         z2 = random_multiplier * np.dot(v_j_item_col, v_j_item_col).item()
-    #         z3 = random_multiplier * np.dot(v_k_item_col, v_k_item_col).item()
-    #
-    #         data = {
-    #             "i": i,
-    #             "j": j,
-    #             "z1": z1,
-    #             "z2": z2,
-    #             "z3": z3
-    #         }
-    #         response = requests.post(MEDIATOR_PROTOCOL_ONE_ENDPOINT, data=json.dumps(data), headers=self._headers)
+    def encrypt_matrix(self, matrix):
+        count = 0
+        public_key = self._vendors.get_he()["public_key"]
+        enc_matrix = []
+        for row in matrix:
+            new_row = []
+            for x in row:
+                new_row.append(public_key.encrypt(x))
+                print(count)
+                count += 1
+            enc_matrix.append(new_row)
+        return enc_matrix
