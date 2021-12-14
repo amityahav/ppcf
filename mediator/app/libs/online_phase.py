@@ -23,8 +23,8 @@ class OnlinePhase(metaclass=Singleton):
         random_multiplier = random.randint(1, 100)
 
         # Step 5
-        encrypted_user_item_row = self._mediator.get_encrypted_user_item_matrix()[user_id, :]
-        encrypted_mask_row = self._mediator.get_encrypted_mask()[user_id, :]
+        encrypted_user_item_row = self._mediator.get_encrypted_user_item_matrix()[user_id, 1:]
+        encrypted_mask_row = self._mediator.get_encrypted_mask()[user_id, 1:]
         random_vector = random_multiplier * s_m
 
         x = np.dot(encrypted_user_item_row, random_vector)
@@ -34,12 +34,14 @@ class OnlinePhase(metaclass=Singleton):
 
     def q_nearst_neighbors(self, item_id):
         result = []
-        item_col = self._mediator.get_similarity_matrix()[:, item_id]
+        item_col = self._mediator.get_similarity_matrix()[1:, item_id]
+        item_col = np.concatenate(item_col[:item_id - 1], item_col[item_id:])
         sorted_item_col = np.argsort(item_col)[::-1]
 
         for i in range(q):
             if self._mediator.get_similarity_matrix()[sorted_item_col[i], item_id] == 0:
                 break
-            result.append(sorted_item_col[i])
+            if sorted_item_col[i] != item_id:
+                result.append(sorted_item_col[i])
 
         return result
