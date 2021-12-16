@@ -1,3 +1,5 @@
+import threading
+import numpy as np
 import requests
 import json
 import jsonpickle
@@ -37,21 +39,22 @@ class OnlinePhase(metaclass=Singleton):
         }}
 
     def compute_error(self):
-
         errors = []
+
         with open(TEST_SET_PATH, 'r') as test_set:
-            for line in test_set:  # user id | item id | rating | timestamp
-                user_id, item_id, rating, _ = list(map(int, line.split('\t')))
-                vendor_id = self.find_vendor_for_item(item_id)
-                fields = {
-                    "vendor_id": vendor_id,
-                    "user_id": user_id,
-                    "item_id": item_id
-                }
-                response = requests.post(VENDORS_PREDICT_ENDPOINT, json.dumps(fields), headers=self._headers)
-                data = json.loads(response.content)
-                prediction = data['message']['prediction']
-                errors.append(abs(rating - prediction))
+
+            lines = np.array(test_set.readlines())
+            lines = np.split(lines, 40)
+            threads = []
+
+            for line in lines:
+                thread = threading.Thread(target=lambda: self.error_calc(line, errors))
+                threads.append(thread)
+                thread.start()
+
+            for thread in threads:
+                thread.join()
+
         return {"message":
                 {"error_rate": sum(errors) / len(errors)}}
 
@@ -71,3 +74,18 @@ class OnlinePhase(metaclass=Singleton):
     def is_valid_item(self, vendor_id, item_id):
         vendor = self._vendors.get_vendors()[vendor_id]
         return vendor.is_valid_item(item_id)
+
+    def error_calc(self, lines, errors):
+        for line in lines:  # user id | item id | rating | timestamp
+            user_id, item_id, rating, _ = list(map(int, line.split('\t')))
+            vendor_id = self.find_vendor_for_item(item_id)
+            fields = {
+                "vendor_id": vendor_id,
+                "user_id": user_id,
+                "item_id": item_id
+            }
+            response = requests.post(VENDORS_PREDICT_ENDPOINT, json.dumps(fields), headers=self._headers)
+            data = json.loads(response.content)
+            prediction = int(data['message']['prediction'])
+            errors.append(abs(rating - prediction))
+
