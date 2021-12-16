@@ -34,9 +34,10 @@ class OnlinePhase(metaclass=Singleton):
         item_rating_average = self._vendors.get_vendors()[vendor_id].get_average_ratings()[item_id - start]
         div = x / y if y != 0 else 0
         prediction = round(item_rating_average + div)
+        item_info_map = self._vendors.get_info_map()
 
         return {"message": {
-            "item_id": item_id,
+            "item": f'{item_id}: {item_info_map[str(item_id)]}',
             "prediction": prediction
         }}
 
@@ -69,7 +70,7 @@ class OnlinePhase(metaclass=Singleton):
 
         return {"message": {
             "user_id": user_id,
-            f'{h} most recommended items': [f'{i}:{item_info_map[str(i)]}' for i in result]
+            f'{h} most recommended items': [f'{i}: {item_info_map[str(i)]}' for i in result]
         }}
 
     def compute_error(self):
@@ -90,7 +91,7 @@ class OnlinePhase(metaclass=Singleton):
                 thread.join()
 
         return {"message":
-                    {"error_rate": sum(errors) / len(errors)}}
+                {"error_rate": sum(errors) / len(errors)}}
 
     def error_calc(self, lines, errors):
         for line in lines:  # user id | item id | rating | timestamp
