@@ -36,7 +36,7 @@ class OnlinePhase(metaclass=Singleton):
         vendor_id, user_id, start, end = data['vendor_id'], data['user_id'], data['start'], data['end']
 
         # Step 2
-        q_nearst_neighbors_lists = [self.q_nearst_neighbors(item) for item in range(start, end + 1)]
+        q_nearst_neighbors_lists = [self.q_nearst_neighbors(item, protocol_four=True) for item in range(start, end + 1)]
         s_m_matrix = np.zeros(shape=(self._mediator.get_similarity_matrix().shape[0] - 1, end - start + 1))
         for item_id, lst in enumerate(q_nearst_neighbors_lists):
             for index in lst:
