@@ -1,6 +1,4 @@
 import jsonpickle
-from flask import jsonify
-import json
 import numpy as np
 import random
 from app.helpers.utils import Singleton
@@ -11,7 +9,7 @@ from app.constants import q
 class OnlinePhase(metaclass=Singleton):
     _mediator = Mediator()
 
-    def protocol_three(self, vendor_id, user_id, item_id):
+    def protocol_three(self, user_id, item_id):
 
         # Step 2
         q_nearst_neighbors = self.q_nearst_neighbors(item_id)
@@ -34,7 +32,36 @@ class OnlinePhase(metaclass=Singleton):
 
         return jsonpickle.encode({"x": x, "y": y})
 
-    def q_nearst_neighbors(self, item_id):
+    def protocol_four(self, data):
+        vendor_id, user_id, start, end = data['vendor_id'], data['user_id'], data['start'], data['end']
+
+        # Step 2
+        q_nearst_neighbors_lists = [self.q_nearst_neighbors(item) for item in range(start, end + 1)]
+        s_m_matrix = np.zeros(shape=(self._mediator.get_similarity_matrix().shape[0] - 1, end - start + 1))
+        for item_id, lst in enumerate(q_nearst_neighbors_lists):
+            for index in lst:
+                s_m_matrix[index - 1, item_id] = self._mediator.get_similarity_matrix()[index, item_id + start]
+
+        # Step 3
+        random_multiplier = random.randint(1, 100)
+
+        # Step 4
+        encrypted_mask_row = self._mediator.get_encrypted_mask()[user_id, 1:]
+        random_vectors = random_multiplier * s_m_matrix
+        x = [np.dot(encrypted_mask_row, random_vectors[:, item]) for item in range(end - start + 1)]
+
+        # Step 5
+        public_key = self._mediator.get_public_key()
+        y = np.copy(encrypted_mask_row)
+        for i in range(start, end + 1):
+            y[i] = y[i] + public_key.encrypt(0)
+
+        # TODO ADD RANDOM PERMUTATIONS
+
+        # Step 6
+        return jsonpickle.encode({"x": x, "y": y})
+
+    def q_nearst_neighbors(self, item_id, protocol_four=False):
         result = []
         item_col = self._mediator.get_similarity_matrix()[:, item_id]
         sorted_item_col = np.argsort(item_col)[::-1]
@@ -42,9 +69,8 @@ class OnlinePhase(metaclass=Singleton):
         sorted_item_col = np.delete(sorted_item_col, index)
 
         for i in range(q):
-            if self._mediator.get_similarity_matrix()[sorted_item_col[i], item_id] == 0:
+            if not protocol_four and self._mediator.get_similarity_matrix()[sorted_item_col[i], item_id] == 0:
                 break
-            if sorted_item_col[i] != item_id:
-                result.append(sorted_item_col[i])
+            result.append(sorted_item_col[i])
 
         return result

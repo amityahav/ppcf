@@ -2,10 +2,13 @@ import requests
 import json
 import jsonpickle
 import math
+import numpy as np
+import threading
 
 from app.libs.vendors import Vendors
 from app.helpers.utils import Singleton
-from app.constants import MEDIATOR_PROTOCOL_THREE_ENDPOINT, VENDORS_PREDICT_ENDPOINT, TEST_SET_PATH
+from app.constants import MEDIATOR_PROTOCOL_THREE_ENDPOINT, MEDIATOR_PROTOCOL_FOUR_ENDPOINT, \
+    VENDORS_PREDICT_ENDPOINT, TEST_SET_PATH, h
 
 
 class OnlinePhase(metaclass=Singleton):
@@ -18,6 +21,7 @@ class OnlinePhase(metaclass=Singleton):
 
         if not self.is_valid_item(vendor_id, item_id):
             return {"message": f"Invalid Item Id for Vendor#{vendor_id}"}
+
         response = requests.post(MEDIATOR_PROTOCOL_THREE_ENDPOINT, data=json.dumps(data), headers=self._headers)
 
         # Step 6
@@ -36,24 +40,71 @@ class OnlinePhase(metaclass=Singleton):
             "prediction": prediction
         }}
 
-    def compute_error(self):
+    def protocol_four(self, data):
+        # Step 1
+        vendor_id, user_id = data['vendor_id'], data['user_id']
+        start, end = self._vendors.get_vendors()[vendor_id].get_item_range()
+        data['start'], data['end'] = start, end
+        response = requests.post(MEDIATOR_PROTOCOL_FOUR_ENDPOINT, data=json.dumps(data), headers=self._headers)
 
+        # Step 7
+        private_key = self._vendors.get_he()['private_key']
+        data = jsonpickle.decode(json.loads(response.content))
+        x = [private_key.decrypt(n) for n in data['x']]
+        y = [private_key.decrypt(n) for n in data['y']]
+
+        # Step 8
+        x_sorted = np.argsort(x)[::-1]
+        result = []
+        number_of_recs = h
+        item_info_map = self._vendors.get_info_map()
+
+        for index in x_sorted:
+            if number_of_recs == 0:
+                break
+
+            if y[index] == 0:
+                result.append(index + start)
+                number_of_recs = number_of_recs - 1
+
+        return {"message": {
+            "user_id": user_id,
+            f'{h} most recommended items': [f'{i}:{item_info_map[str(i)]}' for i in result]
+        }}
+
+    def compute_error(self):
         errors = []
+
         with open(TEST_SET_PATH, 'r') as test_set:
-            for line in test_set:  # user id | item id | rating | timestamp
-                user_id, item_id, rating, _ = list(map(int, line.split('\t')))
-                vendor_id = self.find_vendor_for_item(item_id)
-                fields = {
-                    "vendor_id": vendor_id,
-                    "user_id": user_id,
-                    "item_id": item_id
-                }
-                response = requests.post(VENDORS_PREDICT_ENDPOINT, json.dumps(fields), headers=self._headers)
-                data = json.loads(response.content)
-                prediction = data['message']['prediction']
-                errors.append(abs(rating - prediction))
+
+            lines = np.array(test_set.readlines())
+            lines = np.split(lines, 40)
+            threads = []
+
+            for line in lines:
+                thread = threading.Thread(target=lambda: self.error_calc(line, errors))
+                threads.append(thread)
+                thread.start()
+
+            for thread in threads:
+                thread.join()
+
         return {"message":
-                {"error_rate": sum(errors) / len(errors)}}
+                    {"error_rate": sum(errors) / len(errors)}}
+
+    def error_calc(self, lines, errors):
+        for line in lines:  # user id | item id | rating | timestamp
+            user_id, item_id, rating, _ = list(map(int, line.split('\t')))
+            vendor_id = self.find_vendor_for_item(item_id)
+            fields = {
+                "vendor_id": vendor_id,
+                "user_id": user_id,
+                "item_id": item_id
+            }
+            response = requests.post(VENDORS_PREDICT_ENDPOINT, json.dumps(fields), headers=self._headers)
+            data = json.loads(response.content)
+            prediction = int(data['message']['prediction'])
+            errors.append(abs(rating - prediction))
 
     def find_vendor_for_item(self, item_id):
 
