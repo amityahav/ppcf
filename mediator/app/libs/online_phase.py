@@ -1,4 +1,6 @@
 import jsonpickle
+from flask import jsonify
+import json
 import numpy as np
 import random
 from app.helpers.utils import Singleton
@@ -15,9 +17,9 @@ class OnlinePhase(metaclass=Singleton):
         q_nearst_neighbors = self.q_nearst_neighbors(item_id)
 
         # Step 3
-        s_m = np.zeros(shape=(self._mediator.get_similarity_matrix().shape[0],))
+        s_m = np.zeros(shape=(self._mediator.get_similarity_matrix().shape[0] - 1,))
         for index in q_nearst_neighbors:
-            s_m[index] = self._mediator.get_similarity_matrix()[index, item_id]
+            s_m[index - 1] = self._mediator.get_similarity_matrix()[index, item_id]
 
         # Step 4
         random_multiplier = random.randint(1, 100)
@@ -34,9 +36,10 @@ class OnlinePhase(metaclass=Singleton):
 
     def q_nearst_neighbors(self, item_id):
         result = []
-        item_col = self._mediator.get_similarity_matrix()[1:, item_id]
-        item_col = np.concatenate(item_col[:item_id - 1], item_col[item_id:])
+        item_col = self._mediator.get_similarity_matrix()[:, item_id]
         sorted_item_col = np.argsort(item_col)[::-1]
+        index = np.argwhere(sorted_item_col == item_id)
+        sorted_item_col = np.delete(sorted_item_col, index)
 
         for i in range(q):
             if self._mediator.get_similarity_matrix()[sorted_item_col[i], item_id] == 0:

@@ -20,6 +20,8 @@ class OfflinePhase(metaclass=Singleton):
     _headers = {'Content-type': 'application/json'}
 
     def init_offline_phase(self, number_of_vendors):
+
+        self._vendors.set_number_of_vendors(number_of_vendors)
         total_amount_of_items = self._vendors.get_user_item_matrix().shape[1] - 1
         items_per_vendor = math.floor(total_amount_of_items / number_of_vendors)
         threads = []

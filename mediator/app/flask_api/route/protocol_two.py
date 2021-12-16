@@ -21,3 +21,4 @@ class ProtocolTwo(Resource):
     def put(self):
         OfflinePhase().save_encrypted_matrices()
 
+
