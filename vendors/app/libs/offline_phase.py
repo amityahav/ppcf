@@ -97,15 +97,15 @@ class OfflinePhase(metaclass=Singleton):
         adjusted_items_ratings = np.subtract(items, average_ratings) * mask
 
         v_j.set_average_ratings(average_ratings)
-
+        rows,cols = mask.shape
         # Step 4
         adjusted_items_ratings = adjusted_items_ratings.tolist()
         mask = mask.tolist()
 
         public_key = self._vendors.get_he()["public_key"]
         try:
-            encrypted_user_item_matrix = self.encrypt_matrix(adjusted_items_ratings)
-            encrypted_mask = self.encrypt_matrix(mask)
+            encrypted_user_item_matrix, encrypted_mask = self.encrypt_matrices(adjusted_items_ratings, mask, rows, cols)
+
             # encrypted_user_item_matrix = [[public_key.encrypt(rating) for rating in row] for row in adjusted_items_ratings]
             # encrypted_mask = [[public_key.encrypt(x) for x in row] for row in mask]
         except Exception as e:
@@ -134,15 +134,22 @@ class OfflinePhase(metaclass=Singleton):
     def mask(matrix):
         return matrix > 0
 
-    def encrypt_matrix(self, matrix):
+    def encrypt_matrices(self, user_item, mask, rows, cols):
         count = 0
         public_key = self._vendors.get_he()["public_key"]
-        enc_matrix = []
-        for row in matrix:
-            new_row = []
-            for x in row:
-                new_row.append(public_key.encrypt(x))
+        zero = public_key.encrypt(0)
+        one = public_key.encrypt(1)
+        for i in range(rows):
+            for j in range(cols):
+                if user_item[i][j] == 0:
+                    user_item[i][j] = zero
+                else:
+                    user_item[i][j] = public_key.encrypt(user_item[i][j])
+
+                if mask[i][j] == 0:
+                    mask[i][j] = zero
+                else:
+                    mask[i][j] = one
                 print(count)
                 count += 1
-            enc_matrix.append(new_row)
-        return enc_matrix
+        return user_item, mask
