@@ -1,17 +1,18 @@
-import numpy as np
+import json
 import math
 import random
-import json
-import jsonpickle
 import threading
-import requests
 from pathlib import Path
 
+import jsonpickle
+import numpy as np
+import requests
 
-from app.libs.vendors import Vendors
-from app.libs.vendor import Vendor
+from app.constants import MEDIATOR_PROTOCOL_ONE_ENDPOINT, MEDIATOR_PROTOCOL_TWO_ENDPOINT, SIMILARITY_MATRIX_PATH, \
+                          ENCRYPTED_USER_ITEM_PATH, ENCRYPTED_MASK_PATH
 from app.helpers.utils import Singleton
-from app.constants import MEDIATOR_PROTOCOL_ONE_ENDPOINT, MEDIATOR_PROTOCOL_TWO_ENDPOINT, SIMILARITY_MATRIX_PATH
+from app.libs.vendor import Vendor
+from app.libs.vendors import Vendors
 
 
 class OfflinePhase(metaclass=Singleton):
@@ -19,6 +20,8 @@ class OfflinePhase(metaclass=Singleton):
     _headers = {'Content-type': 'application/json'}
 
     def init_offline_phase(self, number_of_vendors):
+
+        self._vendors.set_number_of_vendors(number_of_vendors)
         total_amount_of_items = self._vendors.get_user_item_matrix().shape[1] - 1
         items_per_vendor = math.floor(total_amount_of_items / number_of_vendors)
         threads = []
@@ -54,8 +57,10 @@ class OfflinePhase(metaclass=Singleton):
         for thread in threads:
             thread.join()
 
+        if Path(ENCRYPTED_USER_ITEM_PATH).is_file() and Path(ENCRYPTED_MASK_PATH).is_file():
+            return
+
         requests.put(MEDIATOR_PROTOCOL_TWO_ENDPOINT)
-        #self.protocol_two(self._vendors.get_vendors()[0])
 
     def protocol_one(self, v_j, v_k):
 
@@ -89,7 +94,7 @@ class OfflinePhase(metaclass=Singleton):
         start, end = v_j.get_item_range()
 
         # Step 1 + 2
-        items = self._vendors.get_user_item_matrix()[:, start: end + 1]
+        items = self._vendors.get_user_item_matrix()[1:, start: end + 1]
         mask = self.mask(items)
         ratings_sum = np.sum(items, axis=0, dtype='float32')
         mask_sum = np.sum(mask, axis=0, dtype='float32')
@@ -97,29 +102,16 @@ class OfflinePhase(metaclass=Singleton):
         adjusted_items_ratings = np.subtract(items, average_ratings) * mask
 
         v_j.set_average_ratings(average_ratings)
-        rows,cols = mask.shape
+
+        if Path(ENCRYPTED_USER_ITEM_PATH).is_file() and Path(ENCRYPTED_MASK_PATH).is_file():
+            return
+
         # Step 4
+        rows, cols = mask.shape
         adjusted_items_ratings = adjusted_items_ratings.tolist()
         mask = mask.tolist()
 
-        public_key = self._vendors.get_he()["public_key"]
-        try:
-            encrypted_user_item_matrix, encrypted_mask = self.encrypt_matrices(adjusted_items_ratings, mask, rows, cols)
-
-            # encrypted_user_item_matrix = [[public_key.encrypt(rating) for rating in row] for row in adjusted_items_ratings]
-            # encrypted_mask = [[public_key.encrypt(x) for x in row] for row in mask]
-        except Exception as e:
-            raise "ERROR"
-        print("check")
-
-        # ######TEST
-        # matrix = np.array([[1, 2, 3], [2, 3, 4]], dtype='int')
-        # matrix2 = np.array([[1, 0, 1], [1, 1, 0]], dtype='int')
-        # matrix = matrix.tolist()
-        # matrix2 = matrix2.tolist()
-        # encrypted_user_item_matrix = [[public_key.encrypt(x) for x in row] for row in matrix]
-        # encrypted_mask = [[public_key.encrypt(x) for x in row] for row in matrix2]
-        # ######TEST
+        encrypted_user_item_matrix, encrypted_mask = self.encrypt_matrices(adjusted_items_ratings, mask, rows, cols)
 
         requests.post(MEDIATOR_PROTOCOL_TWO_ENDPOINT,
                       data=json.dumps(jsonpickle.encode({
@@ -139,17 +131,23 @@ class OfflinePhase(metaclass=Singleton):
         public_key = self._vendors.get_he()["public_key"]
         zero = public_key.encrypt(0)
         one = public_key.encrypt(1)
+        enc_user_item = []
+        enc_mask = []
         for i in range(rows):
+            new_row1 = []
+            new_row2 = []
             for j in range(cols):
                 if user_item[i][j] == 0:
-                    user_item[i][j] = zero
+                    new_row1.append(zero)
                 else:
-                    user_item[i][j] = public_key.encrypt(user_item[i][j])
+                    new_row1.append(public_key.encrypt(user_item[i][j]))
 
                 if mask[i][j] == 0:
-                    mask[i][j] = zero
+                    new_row2.append(zero)
                 else:
-                    mask[i][j] = one
+                    new_row2.append(one)
                 print(count)
                 count += 1
-        return user_item, mask
+            enc_user_item.append(new_row1)
+            enc_mask.append(new_row2)
+        return enc_user_item, enc_mask

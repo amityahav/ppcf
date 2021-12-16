@@ -10,11 +10,16 @@ class Vendor:
         self._user_item_matrix = user_item_matrix
         self._average_ratings = None
 
+    def is_valid_item(self, index):
+        if index > self._end or index < self._start:
+            return False
+        return True
+
     def get_item_ratings(self, index):
 
-        if index > self._end or index < self._start:
-            raise Exception("out of bounds")
-        return self._user_item_matrix[:, index]
+        if not self.is_valid_item(index):
+            raise "out of bounds"
+        return self._user_item_matrix[1:, index]
 
     def get_item_range(self):
 

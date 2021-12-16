@@ -24,7 +24,7 @@ class Predict(Resource):
     def post(self):
         try:
             data = request.json
-            OnlinePhase().protocol_three(data)
+            return OnlinePhase().protocol_three(data)
 
         except Exception as e:
             return {"message": str(e)}

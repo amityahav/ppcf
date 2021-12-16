@@ -1,4 +1,6 @@
 import jsonpickle
+from flask import jsonify
+import json
 import numpy as np
 import random
 from app.helpers.utils import Singleton
@@ -15,16 +17,16 @@ class OnlinePhase(metaclass=Singleton):
         q_nearst_neighbors = self.q_nearst_neighbors(item_id)
 
         # Step 3
-        s_m = np.zeros(shape=(self._mediator.get_similarity_matrix().shape[0],))
+        s_m = np.zeros(shape=(self._mediator.get_similarity_matrix().shape[0] - 1,))
         for index in q_nearst_neighbors:
-            s_m[index] = self._mediator.get_similarity_matrix()[index, item_id]
+            s_m[index - 1] = self._mediator.get_similarity_matrix()[index, item_id]
 
         # Step 4
         random_multiplier = random.randint(1, 100)
 
         # Step 5
-        encrypted_user_item_row = self._mediator.get_encrypted_user_item_matrix()[user_id, :]
-        encrypted_mask_row = self._mediator.get_encrypted_mask()[user_id, :]
+        encrypted_user_item_row = self._mediator.get_encrypted_user_item_matrix()[user_id, 1:]
+        encrypted_mask_row = self._mediator.get_encrypted_mask()[user_id, 1:]
         random_vector = random_multiplier * s_m
 
         x = np.dot(encrypted_user_item_row, random_vector)
@@ -36,10 +38,13 @@ class OnlinePhase(metaclass=Singleton):
         result = []
         item_col = self._mediator.get_similarity_matrix()[:, item_id]
         sorted_item_col = np.argsort(item_col)[::-1]
+        index = np.argwhere(sorted_item_col == item_id)
+        sorted_item_col = np.delete(sorted_item_col, index)
 
         for i in range(q):
             if self._mediator.get_similarity_matrix()[sorted_item_col[i], item_id] == 0:
                 break
-            result.append(sorted_item_col[i])
+            if sorted_item_col[i] != item_id:
+                result.append(sorted_item_col[i])
 
         return result

@@ -1,7 +1,6 @@
 import jsonpickle
 from flask import request
 from flask_restx import Resource, Namespace
-
 from app.libs.offline_phase import OfflinePhase
 
 api = Namespace('protocol_two')
@@ -21,4 +20,5 @@ class ProtocolTwo(Resource):
 
     def put(self):
         OfflinePhase().save_encrypted_matrices()
+
 
