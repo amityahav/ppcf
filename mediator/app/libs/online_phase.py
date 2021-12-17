@@ -59,6 +59,7 @@ class OnlinePhase(metaclass=Singleton):
         # TODO ADD RANDOM PERMUTATIONS
         shuffler = np.random.permutation(len(x))
         self._mediator.shuffler = shuffler
+        # error here
         x = x[shuffler]
         y = y[shuffler]
 
@@ -69,6 +70,10 @@ class OnlinePhase(metaclass=Singleton):
         result = data['result']
         shuffler = self._mediator.get_shuffler()
         shuffler = np.argsort(shuffler)
+        result = np.append(result, np.zeros(len(shuffler)-len(result)))
+        result = result[shuffler]
+        result = result[result != 0]
+        return result
 
     def q_nearst_neighbors(self, item_id, protocol_four=False):
         result = []

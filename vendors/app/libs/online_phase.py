@@ -70,7 +70,7 @@ class OnlinePhase(metaclass=Singleton):
                 number_of_recs = number_of_recs - 1
 
         response = requests.post(MEDIATOR_PROTOCOL_FOUR_STEP_PERMUTATION_ENDPOINT, data=json.dumps({'result': result}), headers=self._headers)
-
+        result = response.content
         return {"message": {
             "user_id": user_id,
             f'{h} most recommended items': [f'{i}: {item_info_map[str(i)]}' for i in result]
