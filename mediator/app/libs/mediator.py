@@ -31,6 +31,11 @@ class Mediator(metaclass=Singleton):
         with open(f'{SHARED_DIR_PATH}/public_key.pk', 'r') as f:
             self._public_key = jsonpickle.decode(json.load(f))
 
+        self.shuffler = 0
+
+    def get_shuffler(self):
+        return self._encrypted_masked
+
     def get_similarity_matrix(self):
         return self._similarity_matrix
 
@@ -42,4 +47,5 @@ class Mediator(metaclass=Singleton):
 
     def get_encrypted_mask(self):
         return self._encrypted_masked
+
 

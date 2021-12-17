@@ -8,7 +8,7 @@ import threading
 from app.libs.vendors import Vendors
 from app.helpers.utils import Singleton
 from app.constants import MEDIATOR_PROTOCOL_THREE_ENDPOINT, MEDIATOR_PROTOCOL_FOUR_ENDPOINT, \
-    VENDORS_PREDICT_ENDPOINT, TEST_SET_PATH, h
+    MEDIATOR_PROTOCOL_FOUR_STEP_PERMUTATION_ENDPOINT, VENDORS_PREDICT_ENDPOINT, TEST_SET_PATH, h
 
 
 class OnlinePhase(metaclass=Singleton):
@@ -65,8 +65,11 @@ class OnlinePhase(metaclass=Singleton):
                 break
 
             if y[index] == 0:
-                result.append(index + start)
+                # result.append(index + start)
+                result.append(index)
                 number_of_recs = number_of_recs - 1
+
+        response = requests.post(MEDIATOR_PROTOCOL_FOUR_STEP_PERMUTATION_ENDPOINT, data=json.dumps({'result': result}), headers=self._headers)
 
         return {"message": {
             "user_id": user_id,
