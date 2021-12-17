@@ -34,6 +34,9 @@ class Mediator(metaclass=Singleton):
     def get_similarity_matrix(self):
         return self._similarity_matrix
 
+    def get_public_key(self):
+        return self._public_key
+
     def get_encrypted_user_item_matrix(self):
         return self._encrypted_user_item_matrix
 

@@ -4,6 +4,7 @@ from flask_restx import Api
 from app.flask_api.route.protocol_one import api as protocol_one
 from app.flask_api.route.protocol_two import api as protocol_two
 from app.flask_api.route.protocol_three import api as protocol_three
+from app.flask_api.route.protocol_four import api as protocol_four
 
 
 api_bp = Blueprint('api', __name__)
@@ -13,3 +14,5 @@ api_prefix = "/mediator"
 api.add_namespace(protocol_one, path=api_prefix)
 api.add_namespace(protocol_two, path=api_prefix)
 api.add_namespace(protocol_three, path=api_prefix)
+api.add_namespace(protocol_four, path=api_prefix)
+

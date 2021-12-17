@@ -2,7 +2,7 @@
 from flask_restx import Resource, Namespace
 from app.libs.online_phase import OnlinePhase
 
-api = Namespace('error')
+api = Namespace('error_rate')
 
 
 responses = {

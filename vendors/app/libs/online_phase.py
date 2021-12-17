@@ -1,13 +1,14 @@
-import threading
-import numpy as np
 import requests
 import json
 import jsonpickle
 import math
+import numpy as np
+import threading
 
 from app.libs.vendors import Vendors
 from app.helpers.utils import Singleton
-from app.constants import MEDIATOR_PROTOCOL_THREE_ENDPOINT, VENDORS_PREDICT_ENDPOINT, TEST_SET_PATH
+from app.constants import MEDIATOR_PROTOCOL_THREE_ENDPOINT, MEDIATOR_PROTOCOL_FOUR_ENDPOINT, \
+    VENDORS_PREDICT_ENDPOINT, TEST_SET_PATH, h
 
 
 class OnlinePhase(metaclass=Singleton):
@@ -20,6 +21,7 @@ class OnlinePhase(metaclass=Singleton):
 
         if not self.is_valid_item(vendor_id, item_id):
             return {"message": f"Invalid Item Id for Vendor#{vendor_id}"}
+
         response = requests.post(MEDIATOR_PROTOCOL_THREE_ENDPOINT, data=json.dumps(data), headers=self._headers)
 
         # Step 6
@@ -32,10 +34,43 @@ class OnlinePhase(metaclass=Singleton):
         item_rating_average = self._vendors.get_vendors()[vendor_id].get_average_ratings()[item_id - start]
         div = x / y if y != 0 else 0
         prediction = round(item_rating_average + div)
+        item_info_map = self._vendors.get_info_map()
 
         return {"message": {
-            "item_id": item_id,
+            "item": f'{item_id}: {item_info_map[str(item_id)]}',
             "prediction": prediction
+        }}
+
+    def protocol_four(self, data):
+        # Step 1
+        vendor_id, user_id = data['vendor_id'], data['user_id']
+        start, end = self._vendors.get_vendors()[vendor_id].get_item_range()
+        data['start'], data['end'] = start, end
+        response = requests.post(MEDIATOR_PROTOCOL_FOUR_ENDPOINT, data=json.dumps(data), headers=self._headers)
+
+        # Step 7
+        private_key = self._vendors.get_he()['private_key']
+        data = jsonpickle.decode(json.loads(response.content))
+        x = [private_key.decrypt(n) for n in data['x']]
+        y = [private_key.decrypt(n) for n in data['y']]
+
+        # Step 8
+        x_sorted = np.argsort(x)[::-1]
+        result = []
+        number_of_recs = h
+        item_info_map = self._vendors.get_info_map()
+
+        for index in x_sorted:
+            if number_of_recs == 0:
+                break
+
+            if y[index] == 0:
+                result.append(index + start)
+                number_of_recs = number_of_recs - 1
+
+        return {"message": {
+            "user_id": user_id,
+            f'{h} most recommended items': [f'{i}: {item_info_map[str(i)]}' for i in result]
         }}
 
     def compute_error(self):
@@ -58,6 +93,20 @@ class OnlinePhase(metaclass=Singleton):
         return {"message":
                 {"error_rate": sum(errors) / len(errors)}}
 
+    def error_calc(self, lines, errors):
+        for line in lines:  # user id | item id | rating | timestamp
+            user_id, item_id, rating, _ = list(map(int, line.split('\t')))
+            vendor_id = self.find_vendor_for_item(item_id)
+            fields = {
+                "vendor_id": vendor_id,
+                "user_id": user_id,
+                "item_id": item_id
+            }
+            response = requests.post(VENDORS_PREDICT_ENDPOINT, json.dumps(fields), headers=self._headers)
+            data = json.loads(response.content)
+            prediction = int(data['message']['prediction'])
+            errors.append(abs(rating - prediction))
+
     def find_vendor_for_item(self, item_id):
 
         total_amount_of_items = self._vendors.get_user_item_matrix().shape[1] - 1
@@ -74,18 +123,3 @@ class OnlinePhase(metaclass=Singleton):
     def is_valid_item(self, vendor_id, item_id):
         vendor = self._vendors.get_vendors()[vendor_id]
         return vendor.is_valid_item(item_id)
-
-    def error_calc(self, lines, errors):
-        for line in lines:  # user id | item id | rating | timestamp
-            user_id, item_id, rating, _ = list(map(int, line.split('\t')))
-            vendor_id = self.find_vendor_for_item(item_id)
-            fields = {
-                "vendor_id": vendor_id,
-                "user_id": user_id,
-                "item_id": item_id
-            }
-            response = requests.post(VENDORS_PREDICT_ENDPOINT, json.dumps(fields), headers=self._headers)
-            data = json.loads(response.content)
-            prediction = int(data['message']['prediction'])
-            errors.append(abs(rating - prediction))
-
