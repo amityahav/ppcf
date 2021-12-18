@@ -67,12 +67,15 @@ class OnlinePhase(metaclass=Singleton):
         return jsonpickle.encode({"x": x, "y": y})
 
     def protocol_four_step_permutation(self, data):
-        result = data['result']
+        result_indices = data['result']
+        result = []
         shuffler = self._mediator.get_shuffler()
-        shuffler = np.argsort(shuffler)
-        result = np.append(result, np.zeros(len(shuffler)-len(result)))
+        # maybe there is a better python way to do this loop
+        for i in range(len(shuffler)):
+            if shuffler[i] in result_indices:
+                result.append(i)
+        shuffler = np.random.permutation(len(result))
         result = result[shuffler]
-        result = result[result != 0]
         return result
 
     def q_nearst_neighbors(self, item_id, protocol_four=False):
