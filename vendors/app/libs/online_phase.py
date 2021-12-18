@@ -73,7 +73,7 @@ class OnlinePhase(metaclass=Singleton):
         result = response.content
         return {"message": {
             "user_id": user_id,
-            f'{h} most recommended items': [f'{i}: {item_info_map[str(i)]}' for i in result]
+            f'{h} most recommended items': [f'{i+start}: {item_info_map[str(i)]}' for i in result]
         }}
 
     def compute_error(self):
