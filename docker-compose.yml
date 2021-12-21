@@ -1,0 +1,16 @@
+version : '3'
+
+services:
+  vendors:
+    build: ./vendors
+    ports:
+      - 5003:5003
+    expose:
+      - 5003
+
+  mediator:
+    build: ./mediator
+    ports:
+      - 5004:5004
+    expose:
+      - 5004

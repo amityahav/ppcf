@@ -5,10 +5,9 @@ from app.libs.offline_phase import OfflinePhase
 api = Namespace('protocol_one')
 
 
-@api.route('/protocol_one')
+@api.route('/protocol_one', doc=False)
 class ProtocolOne(Resource):
 
-    @api.doc(doc=False)
     def post(self):
         try:
             data = request.json

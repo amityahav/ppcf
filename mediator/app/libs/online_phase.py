@@ -48,18 +48,29 @@ class OnlinePhase(metaclass=Singleton):
         # Step 4
         encrypted_mask_row = self._mediator.get_encrypted_mask()[user_id, 1:]
         random_vectors = random_multiplier * s_m_matrix
-        x = [np.dot(encrypted_mask_row, random_vectors[:, item]) for item in range(end - start + 1)]
+        x = np.array([np.dot(encrypted_mask_row, random_vectors[:, item]) for item in range(end - start + 1)])
 
         # Step 5
         public_key = self._mediator.get_public_key()
-        y = np.copy(encrypted_mask_row)
-        for i in range(start, end + 1):
+        y = np.copy(encrypted_mask_row[start - 1: end])
+        for i in range(y.shape[0]):
             y[i] = y[i] + public_key.encrypt(0)
 
-        # TODO ADD RANDOM PERMUTATIONS
-
         # Step 6
+        random_shift_factor = random.randint(1, 100)
+        self._mediator.set_random_shifter(random_shift_factor)
+        x, y = self.random_permutation(x), self.random_permutation(y)
         return jsonpickle.encode({"x": x, "y": y})
+
+    def random_permutation(self, arr):
+        return np.roll(arr, self._mediator.get_random_shifter())
+
+    def invert_random_permutation(self, data):
+        permutation = data['x']
+        length = data['length']
+        random_shift_factor = self._mediator.get_random_shifter()
+        original_indices = [(index - random_shift_factor) % length for index in permutation]
+        return jsonpickle.encode({"result": np.random.permutation(original_indices)})
 
     def q_nearst_neighbors(self, item_id, protocol_four=False):
         result = []
@@ -67,6 +78,8 @@ class OnlinePhase(metaclass=Singleton):
         sorted_item_col = np.argsort(item_col)[::-1]
         index = np.argwhere(sorted_item_col == item_id)
         sorted_item_col = np.delete(sorted_item_col, index)
+        index_0 = np.argwhere(sorted_item_col == 0)
+        sorted_item_col = np.delete(sorted_item_col, index_0)
 
         for i in range(q):
             if not protocol_four and self._mediator.get_similarity_matrix()[sorted_item_col[i], item_id] == 0:

@@ -65,8 +65,16 @@ class OnlinePhase(metaclass=Singleton):
                 break
 
             if y[index] == 0:
-                result.append(index + start)
+                result.append(index)
                 number_of_recs = number_of_recs - 1
+
+        data = {"x": result, "length": end - start + 1}
+        response = requests.put(MEDIATOR_PROTOCOL_FOUR_ENDPOINT,
+                                data=json.dumps(jsonpickle.encode(data)),
+                                headers=self._headers)
+
+        data = jsonpickle.decode(json.loads(response.content))
+        result = [index + start for index in data['result']]
 
         return {"message": {
             "user_id": user_id,

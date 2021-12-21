@@ -31,6 +31,14 @@ class Mediator(metaclass=Singleton):
         with open(f'{SHARED_DIR_PATH}/public_key.pk', 'r') as f:
             self._public_key = jsonpickle.decode(json.load(f))
 
+        self._random_shifter = 0
+
+    def set_random_shifter(self, factor):
+        self._random_shifter = factor
+
+    def get_random_shifter(self):
+        return self._random_shifter
+
     def get_similarity_matrix(self):
         return self._similarity_matrix
 

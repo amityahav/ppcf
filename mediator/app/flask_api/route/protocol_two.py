@@ -6,10 +6,9 @@ from app.libs.offline_phase import OfflinePhase
 api = Namespace('protocol_two')
 
 
-@api.route('/protocol_two')
+@api.route('/protocol_two', doc=False)
 class ProtocolTwo(Resource):
 
-    @api.doc(doc=False)
     def post(self):
         try:
             data = jsonpickle.decode(request.get_json())

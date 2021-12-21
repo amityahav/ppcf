@@ -6,10 +6,9 @@ from app.libs.online_phase import OnlinePhase
 api = Namespace('protocol_three')
 
 
-@api.route('/protocol_three')
+@api.route('/protocol_three', doc=False)
 class ProtocolThree(Resource):
 
-    @api.doc(doc=False)
     def post(self):
         try:
             data = request.json

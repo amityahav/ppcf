@@ -21,7 +21,7 @@ class Vendors(metaclass=Singleton):
             self._public_key = jsonpickle.decode(json.load(f))
 
     def load_items_info(self):
-        with open(ITEMS_INFO_PATH, 'r') as info:
+        with open(ITEMS_INFO_PATH, 'r', encoding="ISO-8859-1") as info:
             for line in info:  # item_id | item_name | ...
                 item_id, item_name, *_ = line.split('|')
                 self._items_info[item_id] = item_name
