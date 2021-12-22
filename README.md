@@ -15,10 +15,10 @@ Setup Guide:
    
   Vendors Service API endpoints:
   
-  - `/start` - Starting Offline phase of the Algorithm (Model Construction) 
-  - `/predict` - for a given vendor id, user id, and item id, returns a prediction for this user rating of the item
-  - `/most_recommended` - for a given vendor id and user id, returns the h-most recommended items for this specific user
-  - `/error` - calculating Mean Absolute Error over the u1.test test set (located in vendors/app/data/raw_data)
+  - `/start` - Starting Offline phase of the Algorithm for K vendors (Model Construction) 
+  - `/predict` - For a given vendor id, user id, and item id, returns a prediction for this user rating of the item
+  - `/most_recommended` - For a given vendor id and user id, returns the h-most recommended items for this specific user
+  - `/error` - Calculating Mean Absolute Error over the u1.test test set (located in vendors/app/data/raw_data)
   
   Model was already computed locally on the MovieLen-100k dataset ,80/20 spllit, and used in both services.
   - for a fresh computation of the Model this 3 lines inside the Vendors Dockerfile need to be commented out:
