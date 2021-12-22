@@ -22,6 +22,7 @@ Setup Guide:
   
   Model was already computed locally on the MovieLen-100k dataset ,80/20 spllit, and used in both services.
   - for a fresh computation of the Model this 3 lines inside the Vendors Dockerfile needs to be commented out:
-    - `COPY app/data/similarity_matrix.npy ppcf/mediator/app/data`
-    - `COPY app/data/encrypted_mask.npy ppcf/mediator/app/data`
-    - `COPY app/data/encrypted_user_item_matrix.npy ppcf/mediator/app/data`
+```sh
+COPY app/data/similarity_matrix.npy ppcf/mediator/app/data
+COPY app/data/encrypted_mask.npy ppcf/mediator/app/data
+COPY app/data/encrypted_user_item_matrix.npy ppcf/mediator/app/data
